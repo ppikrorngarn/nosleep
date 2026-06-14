@@ -10,6 +10,7 @@ chmod +x nosleep.sh
 ./nosleep.sh on
 ./nosleep.sh off
 ./nosleep.sh help
+./nosleep.sh setup
 ```
 
 ## What It Does
@@ -18,6 +19,7 @@ chmod +x nosleep.sh
 - `off` runs `sudo pmset -a disablesleep 0`
 - `status` reads the current `disablesleep` value from `pmset`
 - `help` shows the usage message
+- `setup` installs a sudoers rule so `on`/`off` stop asking for a password
 
 ## Notes
 
@@ -39,7 +41,15 @@ The install step usually does not require a password, but creating the symlink m
 
 ## Skip Password Prompts
 
-To let specific users run `on` / `off` without ever being prompted for a password, add a `sudoers` rule:
+The easiest way:
+
+```bash
+./nosleep.sh setup
+```
+
+This creates a sudoers drop-in file for the current user. You'll enter your password once during setup — after that, `on` and `off` work without prompting.
+
+You can also do it manually for a single user or an entire group:
 
 ```bash
 # Allow all admin-group users to run pmset without password

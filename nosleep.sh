@@ -7,18 +7,20 @@ usage() {
   script_name="$(basename "$0")"
 
   cat <<EOF
-Usage: ${script_name} [on|off|status|help]
+Usage: ${script_name} [on|off|status|setup|help]
 
 Commands:
   on      Disable system sleep on macOS
   off     Re-enable system sleep on macOS
   status  Show whether sleep is currently disabled
+  setup   Install a sudoers rule so on/off stop asking for a password
   help    Show this message
 
 Examples:
   ./${script_name} status
   ./${script_name} on
   ./${script_name} off
+  ./${script_name} setup
 EOF
 }
 
@@ -57,6 +59,11 @@ main() {
       else
         echo "Sleep is ENABLED (nosleep is OFF)."
       fi
+      ;;
+    setup)
+      echo "Setting up password-less nosleep for user '${USER}'..."
+      echo "${USER} ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1" | sudo tee /etc/sudoers.d/nosleep > /dev/null
+      echo "Done. You can now run '${script_name} on' and '${script_name} off' without a password."
       ;;
     help|-h|--help)
       usage
