@@ -6,11 +6,11 @@ A tiny macOS shell script for toggling system sleep with `pmset`.
 
 ```bash
 chmod +x nosleep.sh
-./nosleep.sh status
 ./nosleep.sh on
 ./nosleep.sh off
-./nosleep.sh help
+./nosleep.sh status
 ./nosleep.sh setup
+./nosleep.sh help
 ```
 
 ## What It Does
@@ -18,8 +18,8 @@ chmod +x nosleep.sh
 - `on` runs `sudo pmset -a disablesleep 1`
 - `off` runs `sudo pmset -a disablesleep 0`
 - `status` reads the current `disablesleep` value from `pmset`
-- `help` shows the usage message
 - `setup` installs a sudoers rule so `on`/`off` stop asking for a password
+- `help` shows the usage message
 
 ## Notes
 
