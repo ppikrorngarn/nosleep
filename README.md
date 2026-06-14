@@ -36,3 +36,20 @@ ln -s "$(pwd)/nosleep.sh" /usr/local/bin/nosleep
 ```
 
 The install step usually does not require a password, but creating the symlink may need one if `/usr/local/bin` is not writable by your user.
+
+## Skip Password Prompts
+
+To let specific users run `on` / `off` without ever being prompted for a password, add a `sudoers` rule:
+
+```bash
+# Allow all admin-group users to run pmset without password
+echo "%admin ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1" | sudo tee /etc/sudoers.d/nosleep
+```
+
+Or limit it to a single user:
+
+```bash
+echo "yourusername ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1" | sudo tee /etc/sudoers.d/nosleep
+```
+
+This creates a drop-in file under `/etc/sudoers.d/`, which is safer than editing `/etc/sudoers` directly. The `status` command does not use `sudo`, so it is unaffected.
