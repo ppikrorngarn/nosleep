@@ -57,10 +57,10 @@ If you want to call it as `nosleep` from anywhere:
 
 ```bash
 chmod +x nosleep.sh
-ln -s "$(pwd)/nosleep.sh" /usr/local/bin/nosleep
+sudo ln -s "$(pwd)/nosleep.sh" /usr/local/bin/nosleep
 ```
 
-The install step usually does not require a password, but creating the symlink may need one if `/usr/local/bin` is not writable by your user.
+This requires administrator access because `/usr/local/bin` is a system directory.
 
 ## Skip Password Prompts
 
