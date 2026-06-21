@@ -84,10 +84,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "space":
 				// Toggle sleep state based on current state
-				if m.sleepState == StateNormal {
+				switch m.sleepState {
+				case StateNormal:
 					return m, toggleSleep("on")
-				} else if m.sleepState == StateAwake {
+				case StateAwake:
 					return m, toggleSleep("off")
+				default:
+					// For unknown state or other cases, we can't toggle
+					return m, nil
 				}
 			case "s":
 				return m, toggleSleep("setup")
@@ -184,27 +188,6 @@ func (m model) createStatusCard() string {
 	var title, description, icon string
 	var bgColor, textColor lipgloss.Color
 
-	switch m.sleepState {
-	case StateAwake:
-		title = "AWAKE"
-		description = "Your Mac will not sleep"
-		icon = "☕"
-		bgColor = lipgloss.Color("#d78700")
-		textColor = lipgloss.Color("#ffffff")
-	case StateNormal:
-		title = "SLEEPING"
-		description = "Your Mac can sleep normally"
-		icon = "😴"
-		bgColor = lipgloss.Color("#585858")
-		textColor = lipgloss.Color("#ffffff")
-	default:
-		title = "UNKNOWN"
-		description = "Checking status..."
-		icon = "❓"
-		bgColor = lipgloss.Color("#585858")
-		textColor = lipgloss.Color("#ffffff")
-	}
-
 	// If we're working, show spinner instead of state info
 	if m.phase == PhaseWorking {
 		title = "Working..."
@@ -212,6 +195,28 @@ func (m model) createStatusCard() string {
 		icon = m.spinner.View()
 		bgColor = lipgloss.Color("#585858")
 		textColor = lipgloss.Color("#ffffff")
+	} else {
+		// Handle different sleep states
+		switch m.sleepState {
+		case StateAwake:
+			title = "AWAKE"
+			description = "Your Mac will not sleep"
+			icon = "☕"
+			bgColor = lipgloss.Color("#d78700")
+			textColor = lipgloss.Color("#ffffff")
+		case StateNormal:
+			title = "SLEEPING"
+			description = "Your Mac can sleep normally"
+			icon = "😴"
+			bgColor = lipgloss.Color("#585858")
+			textColor = lipgloss.Color("#ffffff")
+		default:
+			title = "UNKNOWN"
+			description = "Checking status..."
+			icon = "❓"
+			bgColor = lipgloss.Color("#585858")
+			textColor = lipgloss.Color("#ffffff")
+		}
 	}
 
 	// Create the card with appropriate styling
