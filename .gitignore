@@ -1,0 +1,15 @@
+# Compiled binaries
+*.exe
+nosleep-tui
+nosleep-tui.exe
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
