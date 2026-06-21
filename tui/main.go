@@ -114,3 +114,14 @@ func (m model) View() string {
 
 	return s.String()
 }
+
+func checkStatus() tea.Cmd {
+	return func() tea.Msg {
+		result, _ := runNosleepScript("status")
+		status := strings.TrimSpace(result)
+		if status == "" {
+			status = STATUS_ENABLED
+		}
+		return statusMsg(status)
+	}
+}
