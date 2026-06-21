@@ -24,3 +24,20 @@ type resultMsg struct {
 	action string
 	result string
 }
+
+func initialModel() model {
+	return model{
+		choices: []string{
+			"Turn NoSleep ON",
+			"Turn NoSleep OFF",
+			"Check Status",
+			"Setup Passwordless Mode",
+			"Help",
+			"Quit",
+		},
+		cursor:   0,
+		selected: 0,
+		status:   "Checking status...",
+		showResult: false,
+	}
+}
