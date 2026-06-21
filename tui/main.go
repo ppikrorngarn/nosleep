@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -124,4 +127,84 @@ func checkStatus() tea.Cmd {
 		}
 		return statusMsg(status)
 	}
+}
+
+func handleSelection(choice int) tea.Cmd {
+	switch choice {
+	case 0: // Turn NoSleep ON
+		return func() tea.Msg {
+			result, err := runNosleepScript("on")
+			if err != nil {
+				return resultMsg{
+					action: "Turn NoSleep ON",
+					result: fmt.Sprintf("Error: %v\n\n%s", err, result),
+				}
+			}
+			return resultMsg{
+				action: "Turn NoSleep ON",
+				result: fmt.Sprintf("Success!\n\n%s", result),
+			}
+		}
+	case 1: // Turn NoSleep OFF
+		return func() tea.Msg {
+			result, err := runNosleepScript("off")
+			if err != nil {
+				return resultMsg{
+					action: "Turn NoSleep OFF",
+					result: fmt.Sprintf("Error: %v\n\n%s", err, result),
+				}
+			}
+			return resultMsg{
+				action: "Turn NoSleep OFF",
+				result: fmt.Sprintf("Success!\n\n%s", result),
+			}
+		}
+	case 2: // Check Status
+		return func() tea.Msg {
+			result, _ := runNosleepScript("status")
+			return resultMsg{
+				action: "Check Status",
+				result: fmt.Sprintf("Current status:\n\n%s", result),
+			}
+		}
+	case 3: // Setup Passwordless Mode
+		return func() tea.Msg {
+			result, err := runNosleepScript("setup")
+			if err != nil {
+				return resultMsg{
+					action: "Setup Passwordless Mode",
+					result: fmt.Sprintf("Error: %v\n\n%s", err, result),
+				}
+			}
+			return resultMsg{
+				action: "Setup Passwordless Mode",
+				result: fmt.Sprintf("Success!\n\n%s", result),
+			}
+		}
+	case 4: // Help
+		return func() tea.Msg {
+			result, _ := runNosleepScript("help")
+			return resultMsg{
+				action: "Help",
+				result: result,
+			}
+		}
+	case 5: // Quit
+		return tea.Quit
+	}
+	return nil
+}
+
+func runNosleepScript(args ...string) (string, error) {
+	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "nosleep.sh")
+
+	cmd := exec.Command(scriptPath, args...)
+	output, err := cmd.CombinedOutput()
+
+	return string(output), err
+}
+
+func getBinaryPath() string {
+	binaryPath, _ := os.Executable()
+	return binaryPath
 }
