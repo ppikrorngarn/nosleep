@@ -51,6 +51,9 @@ type statusMsg struct {
 	state SleepState
 }
 type workDoneMsg struct{}
+type setupDoneMsg struct {
+	err error
+}
 type errorMsg struct {
 	message string
 }
@@ -94,7 +97,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			case "s":
-				return m, toggleSleep("setup")
+				return m, runSetup()
 			case "h":
 				m.showHelp = !m.showHelp
 				if m.showHelp {
@@ -122,6 +125,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case workDoneMsg:
 		m.phase = PhaseIdle
+		m.errorMessage = ""
+		return m, checkStatus()
+
+	case setupDoneMsg:
+		m.phase = PhaseIdle
+		if msg.err != nil {
+			m.errorMessage = fmt.Sprintf("Setup failed: %v", msg.err)
+			return m, tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
+				return clearErrorMsg{}
+			})
+		}
 		m.errorMessage = ""
 		return m, checkStatus()
 
@@ -293,14 +307,19 @@ func toggleSleep(action string) tea.Cmd {
 			return errorMsg{message: fmt.Sprintf("Failed to %s sleep: %v", action, err)}
 		}
 
-		// For setup, we want to show success but still refresh status
-		if action == "setup" {
-			return workDoneMsg{}
-		}
-
 		// For on/off, we want to refresh status after completion
 		return workDoneMsg{}
 	}
+}
+
+// runSetup suspends the TUI and runs the script's setup command on the real
+// terminal so that sudo can prompt for the password interactively.
+func runSetup() tea.Cmd {
+	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "nosleep.sh")
+	c := exec.Command(scriptPath, "setup")
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return setupDoneMsg{err: err}
+	})
 }
 
 func runNosleepScript(args ...string) (string, error) {
