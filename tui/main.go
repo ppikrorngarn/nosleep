@@ -45,6 +45,50 @@ func initialModel() model {
 	}
 }
 
+func (m model) Init() tea.Cmd {
+	return checkStatus()
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if m.showResult {
+			if msg.String() == "enter" || msg.String() == "q" {
+				m.showResult = false
+				return m, checkStatus()
+			}
+			return m, nil
+		}
+
+		switch msg.String() {
+		case "up":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down":
+			if m.cursor < len(m.choices)-1 {
+				m.cursor++
+			}
+		case "enter":
+			m.selected = m.cursor
+			return m, handleSelection(m.selected)
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "r":
+			return m, checkStatus()
+		}
+
+	case statusMsg:
+		m.status = string(msg)
+	case resultMsg:
+		m.showResult = true
+		m.lastAction = msg.action
+		m.resultMessage = msg.result
+	}
+
+	return m, nil
+}
+
 func (m model) View() string {
 	var s strings.Builder
 
