@@ -82,7 +82,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Handle key presses when not in working phase
 		if m.phase != PhaseWorking {
 			switch msg.String() {
-			case "space":
+			case " ":
 				// Toggle sleep state based on current state
 				switch m.sleepState {
 				case StateNormal:
