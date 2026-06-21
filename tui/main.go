@@ -6,8 +6,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 const (
@@ -15,78 +18,129 @@ const (
 	STATUS_DISABLED = "Sleep is DISABLED (nosleep is ON)."
 )
 
+// SleepState represents the current sleep state
+type SleepState string
+
+const (
+	StateNormal  SleepState = "normal"
+	StateAwake   SleepState = "awake"
+	StateUnknown SleepState = "unknown"
+)
+
+// Phase represents the current UI phase
+type Phase string
+
+const (
+	PhaseIdle    Phase = "idle"
+	PhaseWorking Phase = "working"
+	PhaseHelp    Phase = "help"
+)
+
 type model struct {
-	choices   []string
-	cursor    int
-	selected  int
-	status    string
-	showResult bool
-	resultMessage string
-	lastAction string
+	sleepState   SleepState
+	phase        Phase
+	showHelp     bool
+	errorMessage string
+	spinner      spinner.Model
+	helpContent  string
+	width        int
+	height       int
 }
 
-type statusMsg string
-type resultMsg struct {
-	action string
-	result string
+type statusMsg struct {
+	state SleepState
 }
+type workDoneMsg struct{}
+type errorMsg struct {
+	message string
+}
+type clearErrorMsg struct{}
 
 func initialModel() model {
 	return model{
-		choices: []string{
-			"Turn NoSleep ON",
-			"Turn NoSleep OFF",
-			"Check Status",
-			"Setup Passwordless Mode",
-			"Help",
-			"Quit",
-		},
-		cursor:   0,
-		selected: 0,
-		status:   "Checking status...",
-		showResult: false,
+		sleepState:   StateUnknown,
+		phase:        PhaseIdle,
+		showHelp:     false,
+		errorMessage: "",
+		spinner:      spinner.New(spinner.WithSpinner(spinner.Line)),
+		helpContent:  "",
+		width:        0,
+		height:       0,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return checkStatus()
+	return tea.Batch(
+		checkStatus(),
+		m.spinner.Tick,
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.showResult {
-			if msg.String() == "enter" || msg.String() == "q" {
-				m.showResult = false
+		// Handle key presses when not in working phase
+		if m.phase != PhaseWorking {
+			switch msg.String() {
+			case "space":
+				// Toggle sleep state based on current state
+				if m.sleepState == StateNormal {
+					return m, toggleSleep("on")
+				} else if m.sleepState == StateAwake {
+					return m, toggleSleep("off")
+				}
+			case "s":
+				return m, toggleSleep("setup")
+			case "h":
+				m.showHelp = !m.showHelp
+				if m.showHelp {
+					return m, getHelp()
+				}
+				return m, nil
+			case "r":
 				return m, checkStatus()
+			case "q", "ctrl+c":
+				return m, tea.Quit
 			}
-			return m, nil
-		}
-
-		switch msg.String() {
-		case "up":
-			if m.cursor > 0 {
-				m.cursor--
+		} else {
+			// During working phase, only allow quitting
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
 			}
-		case "down":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-		case "enter":
-			m.selected = m.cursor
-			return m, handleSelection(m.selected)
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		case "r":
-			return m, checkStatus()
 		}
 
 	case statusMsg:
-		m.status = string(msg)
-	case resultMsg:
-		m.showResult = true
-		m.lastAction = msg.action
-		m.resultMessage = msg.result
+		m.sleepState = msg.state
+		m.phase = PhaseIdle
+		m.errorMessage = ""
+		return m, nil
+
+	case workDoneMsg:
+		m.phase = PhaseIdle
+		m.errorMessage = ""
+		return m, checkStatus()
+
+	case errorMsg:
+		m.phase = PhaseIdle
+		m.errorMessage = msg.message
+		return m, tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
+			return clearErrorMsg{}
+		})
+
+	case clearErrorMsg:
+		m.errorMessage = ""
+		return m, nil
+
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	}
 
 	return m, nil
@@ -95,104 +149,150 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	var s strings.Builder
 
-	if m.showResult {
-		s.WriteString(fmt.Sprintf("  Action: %s\n\n", m.lastAction))
-		s.WriteString(m.resultMessage)
-		s.WriteString("\n\n  Press Enter to return to main menu or Q to quit")
+	// Header
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  NoSleep · macOS\n"))
+
+	if m.showHelp {
+		// Help view
+		s.WriteString("\n")
+		s.WriteString(m.helpContent)
+		s.WriteString("\n\n")
+		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  Press H to return to dashboard"))
 	} else {
-		s.WriteString("  NoSleep for macOS\n\n")
-		s.WriteString(fmt.Sprintf("  Status: %s\n\n", m.status))
-		s.WriteString("  Select an action:\n\n")
+		// Main dashboard view
+		s.WriteString("\n")
 
-		for i, choice := range m.choices {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-			s.WriteString(fmt.Sprintf("  %s %s\n", cursor, choice))
+		// Hero status card
+		card := m.createStatusCard()
+		s.WriteString(card)
+		s.WriteString("\n")
+
+		// Controls
+		s.WriteString(m.createControls())
+
+		// Error message if present
+		if m.errorMessage != "" {
+			s.WriteString("\n")
+			s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#ff6666")).Render("  " + m.errorMessage))
 		}
-
-		s.WriteString("\n  Controls: ↑↓ Enter | R: refresh | Q: quit")
 	}
 
 	return s.String()
 }
 
+func (m model) createStatusCard() string {
+	var title, description, icon string
+	var bgColor, textColor lipgloss.Color
+
+	switch m.sleepState {
+	case StateAwake:
+		title = "AWAKE"
+		description = "Your Mac will not sleep"
+		icon = "☕"
+		bgColor = lipgloss.Color("#d78700")
+		textColor = lipgloss.Color("#ffffff")
+	case StateNormal:
+		title = "SLEEPING"
+		description = "Your Mac can sleep normally"
+		icon = "😴"
+		bgColor = lipgloss.Color("#585858")
+		textColor = lipgloss.Color("#ffffff")
+	default:
+		title = "UNKNOWN"
+		description = "Checking status..."
+		icon = "❓"
+		bgColor = lipgloss.Color("#585858")
+		textColor = lipgloss.Color("#ffffff")
+	}
+
+	// If we're working, show spinner instead of state info
+	if m.phase == PhaseWorking {
+		title = "Working..."
+		description = "Please wait..."
+		icon = m.spinner.View()
+		bgColor = lipgloss.Color("#585858")
+		textColor = lipgloss.Color("#ffffff")
+	}
+
+	// Create the card with appropriate styling
+	cardStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#888888")).
+		Width(40).
+		Align(lipgloss.Center).
+		Padding(1, 2).
+		Background(bgColor).
+		Foreground(textColor)
+
+	cardContent := fmt.Sprintf("%s  %s\n%s", icon, title, description)
+	return cardStyle.Render(cardContent)
+}
+
+func (m model) createControls() string {
+	var controls strings.Builder
+
+	// Base controls
+	baseControls := []string{
+		"Space Toggle sleep",
+		"s     Setup passwordless mode",
+		"h     Help",
+		"r     Refresh",
+		"q     Quit",
+	}
+
+	// Add battery warning if asleep
+	if m.sleepState == StateAwake {
+		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled\n"))
+	}
+
+	// Add controls
+	for _, ctrl := range baseControls {
+		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  " + ctrl + "\n"))
+	}
+
+	return controls.String()
+}
+
 func checkStatus() tea.Cmd {
 	return func() tea.Msg {
 		result, _ := runNosleepScript("status")
-		status := strings.TrimSpace(result)
-		if status == "" {
-			status = STATUS_ENABLED
+		var state SleepState
+
+		if strings.Contains(result, "DISABLED") {
+			state = StateAwake
+		} else if strings.Contains(result, "ENABLED") {
+			state = StateNormal
+		} else {
+			state = StateUnknown
 		}
-		return statusMsg(status)
+
+		return statusMsg{state: state}
 	}
 }
 
-func handleSelection(choice int) tea.Cmd {
-	switch choice {
-	case 0: // Turn NoSleep ON
-		return func() tea.Msg {
-			result, err := runNosleepScript("on")
-			if err != nil {
-				return resultMsg{
-					action: "Turn NoSleep ON",
-					result: fmt.Sprintf("Error: %v\n\n%s", err, result),
-				}
-			}
-			return resultMsg{
-				action: "Turn NoSleep ON",
-				result: fmt.Sprintf("Success!\n\n%s", result),
-			}
-		}
-	case 1: // Turn NoSleep OFF
-		return func() tea.Msg {
-			result, err := runNosleepScript("off")
-			if err != nil {
-				return resultMsg{
-					action: "Turn NoSleep OFF",
-					result: fmt.Sprintf("Error: %v\n\n%s", err, result),
-				}
-			}
-			return resultMsg{
-				action: "Turn NoSleep OFF",
-				result: fmt.Sprintf("Success!\n\n%s", result),
-			}
-		}
-	case 2: // Check Status
-		return func() tea.Msg {
-			result, _ := runNosleepScript("status")
-			return resultMsg{
-				action: "Check Status",
-				result: fmt.Sprintf("Current status:\n\n%s", result),
-			}
-		}
-	case 3: // Setup Passwordless Mode
-		return func() tea.Msg {
-			result, err := runNosleepScript("setup")
-			if err != nil {
-				return resultMsg{
-					action: "Setup Passwordless Mode",
-					result: fmt.Sprintf("Error: %v\n\n%s", err, result),
-				}
-			}
-			return resultMsg{
-				action: "Setup Passwordless Mode",
-				result: fmt.Sprintf("Success!\n\n%s", result),
-			}
-		}
-	case 4: // Help
-		return func() tea.Msg {
-			result, _ := runNosleepScript("help")
-			return resultMsg{
-				action: "Help",
-				result: result,
-			}
-		}
-	case 5: // Quit
-		return tea.Quit
+func getHelp() tea.Cmd {
+	return func() tea.Msg {
+		_, _ = runNosleepScript("help")
+		// We don't need to return the result here, just update the state
+		return statusMsg{state: StateUnknown}
 	}
-	return nil
+}
+
+func toggleSleep(action string) tea.Cmd {
+	return func() tea.Msg {
+		_, err := runNosleepScript(action)
+		if err != nil {
+			return errorMsg{message: fmt.Sprintf("Failed to %s sleep: %v", action, err)}
+		}
+
+		// For setup, we want to show success but still refresh status
+		if action == "setup" {
+			return workDoneMsg{}
+		}
+
+		// For on/off, we want to refresh status after completion
+		return workDoneMsg{}
+	}
 }
 
 func runNosleepScript(args ...string) (string, error) {
@@ -210,7 +310,7 @@ func getBinaryPath() string {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)
