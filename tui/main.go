@@ -154,7 +154,8 @@ func (m model) View() string {
 	var s strings.Builder
 
 	// Header
-	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  NoSleep · macOS\n"))
+	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  NoSleep · macOS"))
+	s.WriteString("\n")
 
 	if m.showHelp {
 		// Help view
@@ -247,12 +248,14 @@ func (m model) createControls() string {
 
 	// Add battery warning if asleep
 	if m.sleepState == StateAwake {
-		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled\n"))
+		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled"))
+		controls.WriteString("\n")
 	}
 
 	// Add controls
 	for _, ctrl := range baseControls {
-		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  " + ctrl + "\n"))
+		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  " + ctrl))
+		controls.WriteString("\n")
 	}
 
 	return controls.String()
