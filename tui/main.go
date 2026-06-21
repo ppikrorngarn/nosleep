@@ -260,11 +260,14 @@ func (m model) createControls() string {
 		"q     Quit",
 	}
 
-	// Add battery warning if asleep
+	// Always reserve a line for the battery warning so the layout height
+	// stays constant when toggling between ON/OFF states.
 	if m.sleepState == StateAwake {
 		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled"))
-		controls.WriteString("\n")
+	} else {
+		controls.WriteString(" ")
 	}
+	controls.WriteString("\n")
 
 	// Add controls
 	for _, ctrl := range baseControls {
