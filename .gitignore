@@ -1,8 +1,8 @@
 # Compiled binaries
 *.exe
-nosleep-tui
+/nosleep-tui
 nosleep-tui.exe
-cmd/nosleep-tui/nosleep-tui
+/cmd/nosleep-tui/nosleep-tui
 
 # IDE
 .vscode/

@@ -3,28 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-)
-
-const (
-	STATUS_ENABLED  = "Sleep is ENABLED (nosleep is OFF)."
-	STATUS_DISABLED = "Sleep is DISABLED (nosleep is ON)."
-)
-
-// SleepState represents the current sleep state
-type SleepState string
-
-const (
-	StateNormal  SleepState = "normal"
-	StateAwake   SleepState = "awake"
-	StateUnknown SleepState = "unknown"
 )
 
 // Phase represents the current UI phase
@@ -37,6 +21,7 @@ const (
 )
 
 type model struct {
+	client       *Client
 	sleepState   SleepState
 	phase        Phase
 	showHelp     bool
@@ -61,6 +46,7 @@ type clearErrorMsg struct{}
 
 func initialModel() model {
 	return model{
+		client:       NewClient(),
 		sleepState:   StateUnknown,
 		phase:        PhaseIdle,
 		showHelp:     false,
@@ -74,7 +60,7 @@ func initialModel() model {
 
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
-		checkStatus(),
+		checkStatus(m.client),
 		m.spinner.Tick,
 	)
 }
@@ -89,15 +75,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Toggle sleep state based on current state
 				switch m.sleepState {
 				case StateNormal:
-					return m, toggleSleep("on")
+					return m, toggleSleep(m.client, "on")
 				case StateAwake:
-					return m, toggleSleep("off")
+					return m, toggleSleep(m.client, "off")
 				default:
 					// For unknown state or other cases, we can't toggle
 					return m, nil
 				}
 			case "s":
-				return m, runSetup()
+				return m, runSetup(m.client)
 			case "h":
 				m.showHelp = !m.showHelp
 				if m.showHelp {
@@ -105,7 +91,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			case "r":
-				return m, checkStatus()
+				return m, checkStatus(m.client)
 			case "q", "ctrl+c":
 				return m, tea.Quit
 			}
@@ -126,7 +112,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case workDoneMsg:
 		m.phase = PhaseIdle
 		m.errorMessage = ""
-		return m, checkStatus()
+		return m, checkStatus(m.client)
 
 	case setupDoneMsg:
 		m.phase = PhaseIdle
@@ -137,7 +123,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.errorMessage = ""
-		return m, checkStatus()
+		return m, checkStatus(m.client)
 
 	case errorMsg:
 		m.phase = PhaseIdle
@@ -278,34 +264,32 @@ func (m model) createControls() string {
 	return controls.String()
 }
 
-func checkStatus() tea.Cmd {
+func checkStatus(client *Client) tea.Cmd {
 	return func() tea.Msg {
-		result, _ := runNosleepScript("status")
-		var state SleepState
-
-		if strings.Contains(result, "DISABLED") {
-			state = StateAwake
-		} else if strings.Contains(result, "ENABLED") {
-			state = StateNormal
-		} else {
-			state = StateUnknown
+		state, err := client.Status()
+		if err != nil {
+			return errorMsg{message: fmt.Sprintf("Status check failed: %v", err)}
 		}
-
 		return statusMsg{state: state}
 	}
 }
 
 func getHelp() tea.Cmd {
 	return func() tea.Msg {
-		_, _ = runNosleepScript("help")
-		// We don't need to return the result here, just update the state
+		// Help doesn't need script output — just toggle the UI state
 		return statusMsg{state: StateUnknown}
 	}
 }
 
-func toggleSleep(action string) tea.Cmd {
+func toggleSleep(client *Client, action string) tea.Cmd {
 	return func() tea.Msg {
-		_, err := runNosleepScript(action)
+		var err error
+		switch action {
+		case "on":
+			err = client.On()
+		case "off":
+			err = client.Off()
+		}
 		if err != nil {
 			return errorMsg{message: fmt.Sprintf("Failed to %s sleep: %v", action, err)}
 		}
@@ -317,26 +301,11 @@ func toggleSleep(action string) tea.Cmd {
 
 // runSetup suspends the TUI and runs the script's setup command on the real
 // terminal so that sudo can prompt for the password interactively.
-func runSetup() tea.Cmd {
-	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "cli", "nosleep.sh")
-	c := exec.Command(scriptPath, "setup")
+func runSetup(client *Client) tea.Cmd {
+	c := client.SetupCommand()
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return setupDoneMsg{err: err}
 	})
-}
-
-func runNosleepScript(args ...string) (string, error) {
-	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "cli", "nosleep.sh")
-
-	cmd := exec.Command(scriptPath, args...)
-	output, err := cmd.CombinedOutput()
-
-	return string(output), err
-}
-
-func getBinaryPath() string {
-	binaryPath, _ := os.Executable()
-	return binaryPath
 }
 
 func main() {
