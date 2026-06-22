@@ -23,6 +23,15 @@ chmod +x cli/nosleep.sh
 - `setup` installs a sudoers rule so `on`/`off` stop asking for a password
 - `help` shows the usage message
 
+All commands accept `--json` for machine-readable output:
+
+```bash
+./cli/nosleep.sh status --json   # {"state":"awake","disablesleep":1}
+./cli/nosleep.sh on --json       # {"ok":true,"action":"on"}
+./cli/nosleep.sh off --json      # {"ok":true,"action":"off"}
+./cli/nosleep.sh setup --json    # {"ok":true,"action":"setup","user":"yourname"}
+```
+
 ## Example Scenarios
 
 - Running a long local job or server while the Mac is closed and away from a charger.
@@ -89,7 +98,7 @@ This creates a drop-in file under `/etc/sudoers.d/`, which is safer than editing
 
 ## TUI
 
-A terminal UI dashboard for toggling sleep with keyboard shortcuts.
+A terminal UI dashboard for toggling sleep with keyboard shortcuts. The TUI communicates with `nosleep.sh` via the `--json` flag for structured, reliable parsing.
 
 ### Build
 
