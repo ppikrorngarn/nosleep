@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 )
 
 //go:generate cp ../../cli/nosleep.sh ./nosleep.sh
@@ -133,9 +135,17 @@ func (c *Client) SetupCommand() *exec.Cmd {
 }
 
 // run executes the nosleep.sh script with the given arguments and returns
-// its stdout output.
+// its stdout output. It uses a 5-second timeout to prevent hangs.
 func (c *Client) run(args ...string) (string, error) {
-	cmd := exec.Command(c.scriptPath, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, c.scriptPath, args...)
 	out, err := cmd.Output()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("command timed out after 5 seconds")
+	}
+
 	return string(out), err
 }
