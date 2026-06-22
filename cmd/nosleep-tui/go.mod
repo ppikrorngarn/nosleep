@@ -1,4 +1,4 @@
-module nosleep/tui
+module nosleep-tui
 
 go 1.24.0
 
