@@ -47,6 +47,14 @@ func NewClient() *Client {
 	}
 	scriptPath := f.Name()
 
+	// We must use f.Chmod() instead of relying on WriteFile permissions
+	// because CreateTemp creates the file with 0600 permissions first.
+	if err := f.Chmod(0755); err != nil {
+		f.Close()
+		os.Remove(scriptPath)
+		panic(fmt.Sprintf("failed to make script executable: %v", err))
+	}
+
 	if err := os.WriteFile(scriptPath, nosleepScript, 0755); err != nil {
 		os.Remove(scriptPath)
 		panic(fmt.Sprintf("failed to write embedded script: %v", err))
