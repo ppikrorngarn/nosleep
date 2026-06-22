@@ -86,3 +86,34 @@ echo "yourusername ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bi
 ```
 
 This creates a drop-in file under `/etc/sudoers.d/`, which is safer than editing `/etc/sudoers` directly. The `status` command does not use `sudo`, so it is unaffected.
+
+## TUI
+
+A terminal UI dashboard for toggling sleep with keyboard shortcuts.
+
+### Build
+
+```bash
+cd cmd/nosleep-tui && go build
+```
+
+This produces a `nosleep-tui` binary in `cmd/nosleep-tui/`.
+
+### Run
+
+You can run it directly or use the macOS launcher:
+
+```bash
+./cmd/nosleep-tui/nosleep-tui
+# or double-click mac/nosleep.command
+```
+
+### Key Bindings
+
+| Key     | Action                        |
+|---------|-------------------------------|
+| Space   | Toggle sleep on/off           |
+| s       | Setup passwordless mode       |
+| h       | Toggle help                   |
+| r       | Refresh status                |
+| q       | Quit                          |
