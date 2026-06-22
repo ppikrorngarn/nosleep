@@ -45,6 +45,20 @@ type errorMsg struct {
 }
 type clearErrorMsg struct{}
 
+// Styles
+var (
+	textSubtle = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
+	textError  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff6666"))
+	textWarn   = lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700"))
+
+	cardBaseStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#888888")).
+			Width(40).
+			Align(lipgloss.Center).
+			Padding(1, 2)
+)
+
 // Helper functions for creating UI elements
 func createStatusCard(m model) string {
 	var title, description, icon string
@@ -82,12 +96,7 @@ func createStatusCard(m model) string {
 	}
 
 	// Create the card with appropriate styling
-	cardStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#888888")).
-		Width(40).
-		Align(lipgloss.Center).
-		Padding(1, 2).
+	cardStyle := cardBaseStyle.Copy().
 		Background(bgColor).
 		Foreground(textColor)
 
@@ -110,7 +119,7 @@ func createControls(m model) string {
 	// Always reserve a line for the battery warning so the layout height
 	// stays constant when toggling between ON/OFF states.
 	if m.sleepState == StateAwake {
-		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled"))
+		controls.WriteString(textWarn.Render("  ⚠ Battery drain risk while disabled"))
 	} else {
 		controls.WriteString(" ")
 	}
@@ -118,7 +127,7 @@ func createControls(m model) string {
 
 	// Add controls
 	for _, ctrl := range baseControls {
-		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  " + ctrl))
+		controls.WriteString(textSubtle.Render("  " + ctrl))
 		controls.WriteString("\n")
 	}
 
@@ -284,7 +293,7 @@ func (m model) View() string {
 	var s strings.Builder
 
 	// Header
-	s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  NoSleep · macOS"))
+	s.WriteString(textSubtle.Render("  NoSleep · macOS"))
 	s.WriteString("\n")
 
 	if m.showHelp {
@@ -292,7 +301,7 @@ func (m model) View() string {
 		s.WriteString("\n")
 		s.WriteString(m.helpContent)
 		s.WriteString("\n\n")
-		s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  Press H to return to dashboard"))
+		s.WriteString(textSubtle.Render("  Press H to return to dashboard"))
 	} else {
 		// Main dashboard view
 		s.WriteString("\n")
@@ -308,7 +317,7 @@ func (m model) View() string {
 		// Error message if present
 		if m.errorMessage != "" {
 			s.WriteString("\n")
-			s.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#ff6666")).Render("  " + m.errorMessage))
+			s.WriteString(textError.Render("  " + m.errorMessage))
 		}
 	}
 
