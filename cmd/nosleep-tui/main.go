@@ -44,9 +44,9 @@ type errorMsg struct {
 }
 type clearErrorMsg struct{}
 
-func initialModel() model {
+func initialModel(client *Client) model {
 	return model{
-		client:       NewClient(),
+		client:       client,
 		sleepState:   StateUnknown,
 		phase:        PhaseIdle,
 		showHelp:     false,
@@ -309,7 +309,10 @@ func runSetup(client *Client) tea.Cmd {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+	client := NewClient()
+	defer client.Cleanup()
+
+	p := tea.NewProgram(initialModel(client), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v", err)
 		os.Exit(1)

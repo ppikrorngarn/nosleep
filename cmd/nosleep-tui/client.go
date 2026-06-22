@@ -1,12 +1,16 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 )
+
+//go:generate cp ../../cli/nosleep.sh ./nosleep.sh
+//go:embed nosleep.sh
+var nosleepScript []byte
 
 // SleepState represents the current sleep state.
 type SleepState string
@@ -35,11 +39,28 @@ type Client struct {
 	scriptPath string
 }
 
-// NewClient creates a Client by locating nosleep.sh relative to the running binary.
+// NewClient creates a Client by extracting the embedded nosleep.sh to a temp file.
 func NewClient() *Client {
-	binaryPath, _ := os.Executable()
-	scriptPath := filepath.Join(filepath.Dir(binaryPath), "..", "..", "cli", "nosleep.sh")
+	f, err := os.CreateTemp("", "nosleep-*.sh")
+	if err != nil {
+		panic(fmt.Sprintf("failed to create temp file for script: %v", err))
+	}
+	scriptPath := f.Name()
+
+	if err := os.WriteFile(scriptPath, nosleepScript, 0755); err != nil {
+		os.Remove(scriptPath)
+		panic(fmt.Sprintf("failed to write embedded script: %v", err))
+	}
+	f.Close()
+
 	return &Client{scriptPath: scriptPath}
+}
+
+// Cleanup removes the temporary script file.
+func (c *Client) Cleanup() {
+	if c.scriptPath != "" {
+		os.Remove(c.scriptPath)
+	}
 }
 
 // Status queries the current sleep state and returns a SleepState.

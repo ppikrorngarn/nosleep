@@ -103,10 +103,12 @@ A terminal UI dashboard for toggling sleep with keyboard shortcuts. The TUI comm
 ### Build
 
 ```bash
-cd cmd/nosleep-tui && go build
+cd cmd/nosleep-tui
+go generate ./...
+go build
 ```
 
-This produces a `nosleep-tui` binary in `cmd/nosleep-tui/`.
+This embeds the `nosleep.sh` script into a single, self-contained `nosleep-tui` binary.
 
 ### Run
 
