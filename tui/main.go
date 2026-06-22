@@ -318,7 +318,7 @@ func toggleSleep(action string) tea.Cmd {
 // runSetup suspends the TUI and runs the script's setup command on the real
 // terminal so that sudo can prompt for the password interactively.
 func runSetup() tea.Cmd {
-	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "nosleep.sh")
+	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "cli", "nosleep.sh")
 	c := exec.Command(scriptPath, "setup")
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return setupDoneMsg{err: err}
@@ -326,7 +326,7 @@ func runSetup() tea.Cmd {
 }
 
 func runNosleepScript(args ...string) (string, error) {
-	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "nosleep.sh")
+	scriptPath := filepath.Join(filepath.Dir(getBinaryPath()), "..", "cli", "nosleep.sh")
 
 	cmd := exec.Command(scriptPath, args...)
 	output, err := cmd.CombinedOutput()

@@ -7,12 +7,12 @@ It is intended for cases where you need a system-level sleep toggle, including l
 ## Usage
 
 ```bash
-chmod +x nosleep.sh
-./nosleep.sh on
-./nosleep.sh off
-./nosleep.sh status
-./nosleep.sh setup
-./nosleep.sh help
+chmod +x cli/nosleep.sh
+./cli/nosleep.sh on
+./cli/nosleep.sh off
+./cli/nosleep.sh status
+./cli/nosleep.sh setup
+./cli/nosleep.sh help
 ```
 
 ## What It Does
@@ -56,8 +56,8 @@ This script uses `pmset` to change the system `disablesleep` setting directly. I
 If you want to call it as `nosleep` from anywhere:
 
 ```bash
-chmod +x nosleep.sh
-sudo ln -s "$(pwd)/nosleep.sh" /usr/local/bin/nosleep
+chmod +x cli/nosleep.sh
+sudo ln -s "$(pwd)/cli/nosleep.sh" /usr/local/bin/nosleep
 ```
 
 This requires administrator access because `/usr/local/bin` is a system directory.
@@ -67,7 +67,7 @@ This requires administrator access because `/usr/local/bin` is a system director
 The easiest way:
 
 ```bash
-./nosleep.sh setup
+./cli/nosleep.sh setup
 ```
 
 This creates a sudoers drop-in file for the current user. You'll enter your password once during setup — after that, `on` and `off` work without prompting.
