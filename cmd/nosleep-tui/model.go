@@ -29,18 +29,14 @@ type model struct {
 	height       int
 }
 
-// Message types
-type statusMsg struct {
-	state SleepState
-}
-type workDoneMsg struct{}
-type setupDoneMsg struct {
-	err error
-}
-type errorMsg struct {
-	message string
-}
-type clearErrorMsg struct{}
+// Message types used by Bubble Tea to update application state
+type (
+	statusMsg     struct{ state SleepState }
+	workDoneMsg   struct{}
+	setupDoneMsg  struct{ err error }
+	errorMsg      struct{ message string }
+	clearErrorMsg struct{}
+)
 
 // Model initialization
 func initialModel(client *Client) model {

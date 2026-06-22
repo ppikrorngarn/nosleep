@@ -21,6 +21,7 @@ var (
 			Padding(1, 2)
 )
 
+// View renders the TUI interface based on the current model state.
 func (m model) View() string {
 	var s strings.Builder
 
@@ -56,7 +57,8 @@ func (m model) View() string {
 	return s.String()
 }
 
-// Helper functions for creating UI elements
+// createStatusCard generates the main hero visual showing whether the
+// Mac is currently awake or sleeping.
 func createStatusCard(m model) string {
 	var title, description, icon string
 	var bgColor, textColor lipgloss.Color
@@ -101,6 +103,8 @@ func createStatusCard(m model) string {
 	return cardStyle.Render(cardContent)
 }
 
+// createControls returns the list of available keyboard shortcuts
+// and optionally renders a battery warning if sleep is disabled.
 func createControls(m model) string {
 	var controls strings.Builder
 

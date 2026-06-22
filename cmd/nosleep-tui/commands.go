@@ -7,16 +7,20 @@ import (
 )
 
 // Command functions
+
+// checkStatus queries the bash script for the current system sleep state
 func checkStatus(client *Client) tea.Cmd {
 	return func() tea.Msg {
 		state, err := client.Status()
 		if err != nil {
 			return errorMsg{message: fmt.Sprintf("Status check failed: %v", err)}
 		}
+
 		return statusMsg{state: state}
 	}
 }
 
+// getHelp emits a dummy status message to trigger the UI to show the help screen
 func getHelp() tea.Cmd {
 	return func() tea.Msg {
 		// Help doesn't need script output — just toggle the UI state
@@ -24,15 +28,18 @@ func getHelp() tea.Cmd {
 	}
 }
 
+// toggleSleep executes either 'on' or 'off' command via the client
 func toggleSleep(client *Client, action string) tea.Cmd {
 	return func() tea.Msg {
 		var err error
+
 		switch action {
 		case "on":
 			err = client.On()
 		case "off":
 			err = client.Off()
 		}
+
 		if err != nil {
 			return errorMsg{message: fmt.Sprintf("Failed to %s sleep: %v", action, err)}
 		}
