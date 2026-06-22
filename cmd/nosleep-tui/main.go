@@ -32,6 +32,7 @@ type model struct {
 	height       int
 }
 
+// Message types
 type statusMsg struct {
 	state SleepState
 }
@@ -44,6 +45,132 @@ type errorMsg struct {
 }
 type clearErrorMsg struct{}
 
+// Helper functions for creating UI elements
+func createStatusCard(m model) string {
+	var title, description, icon string
+	var bgColor, textColor lipgloss.Color
+
+	// If we're working, show spinner instead of state info
+	if m.phase == PhaseWorking {
+		title = "Working..."
+		description = "Please wait..."
+		icon = m.spinner.View()
+		bgColor = lipgloss.Color("#585858")
+		textColor = lipgloss.Color("#ffffff")
+	} else {
+		// Handle different sleep states
+		switch m.sleepState {
+		case StateAwake:
+			title = "AWAKE"
+			description = "Your Mac will not sleep"
+			icon = "☕"
+			bgColor = lipgloss.Color("#d78700")
+			textColor = lipgloss.Color("#ffffff")
+		case StateNormal:
+			title = "SLEEPING"
+			description = "Your Mac can sleep normally"
+			icon = "😴"
+			bgColor = lipgloss.Color("#585858")
+			textColor = lipgloss.Color("#ffffff")
+		default:
+			title = "UNKNOWN"
+			description = "Checking status..."
+			icon = "❓"
+			bgColor = lipgloss.Color("#585858")
+			textColor = lipgloss.Color("#ffffff")
+		}
+	}
+
+	// Create the card with appropriate styling
+	cardStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#888888")).
+		Width(40).
+		Align(lipgloss.Center).
+		Padding(1, 2).
+		Background(bgColor).
+		Foreground(textColor)
+
+	cardContent := fmt.Sprintf("%s  %s\n%s", icon, title, description)
+	return cardStyle.Render(cardContent)
+}
+
+func createControls(m model) string {
+	var controls strings.Builder
+
+	// Base controls
+	baseControls := []string{
+		"Space Toggle sleep",
+		"s     Setup passwordless mode",
+		"h     Help",
+		"r     Refresh",
+		"q     Quit",
+	}
+
+	// Always reserve a line for the battery warning so the layout height
+	// stays constant when toggling between ON/OFF states.
+	if m.sleepState == StateAwake {
+		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled"))
+	} else {
+		controls.WriteString(" ")
+	}
+	controls.WriteString("\n")
+
+	// Add controls
+	for _, ctrl := range baseControls {
+		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  " + ctrl))
+		controls.WriteString("\n")
+	}
+
+	return controls.String()
+}
+
+// Command functions
+func checkStatus(client *Client) tea.Cmd {
+	return func() tea.Msg {
+		state, err := client.Status()
+		if err != nil {
+			return errorMsg{message: fmt.Sprintf("Status check failed: %v", err)}
+		}
+		return statusMsg{state: state}
+	}
+}
+
+func getHelp() tea.Cmd {
+	return func() tea.Msg {
+		// Help doesn't need script output — just toggle the UI state
+		return statusMsg{state: StateUnknown}
+	}
+}
+
+func toggleSleep(client *Client, action string) tea.Cmd {
+	return func() tea.Msg {
+		var err error
+		switch action {
+		case "on":
+			err = client.On()
+		case "off":
+			err = client.Off()
+		}
+		if err != nil {
+			return errorMsg{message: fmt.Sprintf("Failed to %s sleep: %v", action, err)}
+		}
+
+		// For on/off, we want to refresh status after completion
+		return workDoneMsg{}
+	}
+}
+
+// runSetup suspends the TUI and runs the script's setup command on the real
+// terminal so that sudo can prompt for the password interactively.
+func runSetup(client *Client) tea.Cmd {
+	c := client.SetupCommand()
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return setupDoneMsg{err: err}
+	})
+}
+
+// Model initialization
 func initialModel(client *Client) model {
 	return model{
 		client:       client,
@@ -58,6 +185,7 @@ func initialModel(client *Client) model {
 	}
 }
 
+// Model methods
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		checkStatus(m.client),
@@ -117,20 +245,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case setupDoneMsg:
 		m.phase = PhaseIdle
 		if msg.err != nil {
-			m.errorMessage = fmt.Sprintf("Setup failed: %v", msg.err)
-			return m, tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
-				return clearErrorMsg{}
-			})
+			return m.handleError(fmt.Sprintf("Setup failed: %v", msg.err))
 		}
 		m.errorMessage = ""
 		return m, checkStatus(m.client)
 
 	case errorMsg:
 		m.phase = PhaseIdle
-		m.errorMessage = msg.message
-		return m, tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
-			return clearErrorMsg{}
-		})
+		return m.handleError(msg.message)
 
 	case clearErrorMsg:
 		m.errorMessage = ""
@@ -148,6 +270,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// Helper method for error handling
+func (m model) handleError(message string) (tea.Model, tea.Cmd) {
+	m.errorMessage = message
+	return m, tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
+		return clearErrorMsg{}
+	})
 }
 
 func (m model) View() string {
@@ -168,12 +298,12 @@ func (m model) View() string {
 		s.WriteString("\n")
 
 		// Hero status card
-		card := m.createStatusCard()
+		card := createStatusCard(m)
 		s.WriteString(card)
 		s.WriteString("\n")
 
 		// Controls
-		s.WriteString(m.createControls())
+		s.WriteString(createControls(m))
 
 		// Error message if present
 		if m.errorMessage != "" {
@@ -183,129 +313,6 @@ func (m model) View() string {
 	}
 
 	return s.String()
-}
-
-func (m model) createStatusCard() string {
-	var title, description, icon string
-	var bgColor, textColor lipgloss.Color
-
-	// If we're working, show spinner instead of state info
-	if m.phase == PhaseWorking {
-		title = "Working..."
-		description = "Please wait..."
-		icon = m.spinner.View()
-		bgColor = lipgloss.Color("#585858")
-		textColor = lipgloss.Color("#ffffff")
-	} else {
-		// Handle different sleep states
-		switch m.sleepState {
-		case StateAwake:
-			title = "AWAKE"
-			description = "Your Mac will not sleep"
-			icon = "☕"
-			bgColor = lipgloss.Color("#d78700")
-			textColor = lipgloss.Color("#ffffff")
-		case StateNormal:
-			title = "SLEEPING"
-			description = "Your Mac can sleep normally"
-			icon = "😴"
-			bgColor = lipgloss.Color("#585858")
-			textColor = lipgloss.Color("#ffffff")
-		default:
-			title = "UNKNOWN"
-			description = "Checking status..."
-			icon = "❓"
-			bgColor = lipgloss.Color("#585858")
-			textColor = lipgloss.Color("#ffffff")
-		}
-	}
-
-	// Create the card with appropriate styling
-	cardStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#888888")).
-		Width(40).
-		Align(lipgloss.Center).
-		Padding(1, 2).
-		Background(bgColor).
-		Foreground(textColor)
-
-	cardContent := fmt.Sprintf("%s  %s\n%s", icon, title, description)
-	return cardStyle.Render(cardContent)
-}
-
-func (m model) createControls() string {
-	var controls strings.Builder
-
-	// Base controls
-	baseControls := []string{
-		"Space Toggle sleep",
-		"s     Setup passwordless mode",
-		"h     Help",
-		"r     Refresh",
-		"q     Quit",
-	}
-
-	// Always reserve a line for the battery warning so the layout height
-	// stays constant when toggling between ON/OFF states.
-	if m.sleepState == StateAwake {
-		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#d78700")).Render("  ⚠ Battery drain risk while disabled"))
-	} else {
-		controls.WriteString(" ")
-	}
-	controls.WriteString("\n")
-
-	// Add controls
-	for _, ctrl := range baseControls {
-		controls.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render("  " + ctrl))
-		controls.WriteString("\n")
-	}
-
-	return controls.String()
-}
-
-func checkStatus(client *Client) tea.Cmd {
-	return func() tea.Msg {
-		state, err := client.Status()
-		if err != nil {
-			return errorMsg{message: fmt.Sprintf("Status check failed: %v", err)}
-		}
-		return statusMsg{state: state}
-	}
-}
-
-func getHelp() tea.Cmd {
-	return func() tea.Msg {
-		// Help doesn't need script output — just toggle the UI state
-		return statusMsg{state: StateUnknown}
-	}
-}
-
-func toggleSleep(client *Client, action string) tea.Cmd {
-	return func() tea.Msg {
-		var err error
-		switch action {
-		case "on":
-			err = client.On()
-		case "off":
-			err = client.Off()
-		}
-		if err != nil {
-			return errorMsg{message: fmt.Sprintf("Failed to %s sleep: %v", action, err)}
-		}
-
-		// For on/off, we want to refresh status after completion
-		return workDoneMsg{}
-	}
-}
-
-// runSetup suspends the TUI and runs the script's setup command on the real
-// terminal so that sudo can prompt for the password interactively.
-func runSetup(client *Client) tea.Cmd {
-	c := client.SetupCommand()
-	return tea.ExecProcess(c, func(err error) tea.Msg {
-		return setupDoneMsg{err: err}
-	})
 }
 
 func main() {
