@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Make sure the TUI binary and script are in the right place
-SCRIPT_PATH="$SCRIPT_DIR/../nosleep.sh"
+SCRIPT_PATH="$SCRIPT_DIR/../cli/nosleep.sh"
 TUI_BINARY="$SCRIPT_DIR/../tui/nosleep-tui"
 
 # Check if the TUI binary exists
@@ -26,7 +26,7 @@ fi
 # Check if the nosleep.sh script exists
 if [[ ! -f "$SCRIPT_PATH" ]]; then
     echo "Error: nosleep.sh not found at $SCRIPT_PATH"
-    echo "Please make sure nosleep.sh is in the parent directory."
+    echo "Please make sure cli/nosleep.sh is in the parent directory."
     echo ""
     echo "Press Enter to exit..."
     read
