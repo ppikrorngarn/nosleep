@@ -40,10 +40,10 @@ type Client struct {
 }
 
 // NewClient creates a Client by extracting the embedded nosleep.sh to a temp file.
-func NewClient() *Client {
+func NewClient() (*Client, error) {
 	f, err := os.CreateTemp("", "nosleep-*.sh")
 	if err != nil {
-		panic(fmt.Sprintf("failed to create temp file for script: %v", err))
+		return nil, fmt.Errorf("failed to create temp file for script: %w", err)
 	}
 	scriptPath := f.Name()
 
@@ -52,16 +52,16 @@ func NewClient() *Client {
 	if err := f.Chmod(0755); err != nil {
 		f.Close()
 		os.Remove(scriptPath)
-		panic(fmt.Sprintf("failed to make script executable: %v", err))
+		return nil, fmt.Errorf("failed to make script executable: %w", err)
 	}
 
 	if err := os.WriteFile(scriptPath, nosleepScript, 0755); err != nil {
 		os.Remove(scriptPath)
-		panic(fmt.Sprintf("failed to write embedded script: %v", err))
+		return nil, fmt.Errorf("failed to write embedded script: %w", err)
 	}
 	f.Close()
 
-	return &Client{scriptPath: scriptPath}
+	return &Client{scriptPath: scriptPath}, nil
 }
 
 // Cleanup removes the temporary script file.

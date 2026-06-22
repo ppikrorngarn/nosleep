@@ -316,7 +316,11 @@ func (m model) View() string {
 }
 
 func main() {
-	client := NewClient()
+	client, err := NewClient()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing client: %v\n", err)
+		os.Exit(1)
+	}
 	defer client.Cleanup()
 
 	p := tea.NewProgram(initialModel(client), tea.WithAltScreen())
