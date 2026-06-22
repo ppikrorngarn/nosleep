@@ -102,13 +102,13 @@ A terminal UI dashboard for toggling sleep with keyboard shortcuts. The TUI comm
 
 ### Build
 
+The easiest way to build the TUI is using `make`:
+
 ```bash
-cd cmd/nosleep-tui
-go generate ./...
-go build
+make build
 ```
 
-This embeds the `nosleep.sh` script into a single, self-contained `nosleep-tui` binary.
+This will automatically generate the required embedded files and compile a single, self-contained `nosleep-tui` binary in `cmd/nosleep-tui/`.
 
 ### Run
 
