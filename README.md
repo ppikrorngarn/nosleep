@@ -125,7 +125,8 @@ You can run it directly or use the macOS launcher:
 |---------|-------------------------------|
 | Space   | Toggle sleep on/off           |
 | s       | Setup passwordless mode       |
-| h       | Toggle help                   |
+| h       | Open help                     |
+| esc     | Close help                    |
 | r       | Refresh status                |
 | q       | Quit                          |
 
