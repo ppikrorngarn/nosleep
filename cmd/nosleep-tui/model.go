@@ -25,7 +25,7 @@ Key Bindings
   s       Setup passwordless mode (sudoers rule)
   h       Toggle this help screen
   r       Refresh current sleep state
-  q       Quit the application
+  q / esc Quit the application
 
 Safety
   Your Mac can remain awake with lid closed and while not on power.
@@ -81,10 +81,13 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Allow esc to close help at any time
-		if msg.String() == "esc" && m.showHelp {
-			m.showHelp = false
-			return m, nil
+		// Allow esc to close help or quit the app
+		if msg.String() == "esc" {
+			if m.showHelp {
+				m.showHelp = false
+				return m, nil
+			}
+			return m, tea.Quit
 		}
 
 		// Handle key presses when not in working phase
