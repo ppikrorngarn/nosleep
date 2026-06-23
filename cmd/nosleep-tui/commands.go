@@ -31,6 +31,10 @@ func getHelp() tea.Cmd {
 // toggleSleep executes either 'on' or 'off' command via the client
 func toggleSleep(client *Client, action string) tea.Cmd {
 	return func() tea.Msg {
+		if client.NeedsSetup() {
+			return errorMsg{message: "Setup required — press S to enable passwordless mode"}
+		}
+
 		var err error
 
 		switch action {
