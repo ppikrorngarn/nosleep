@@ -15,5 +15,8 @@ nosleep-tui.exe
 .DS_Store
 Thumbs.db
 
+# Build output
+build/
+
 # Go
 vendor/
