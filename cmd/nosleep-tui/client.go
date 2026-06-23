@@ -127,6 +127,12 @@ func (c *Client) Off() error {
 	return nil
 }
 
+// NeedsSetup checks whether the sudoers rule for passwordless pmset is missing.
+func (c *Client) NeedsSetup() bool {
+	_, err := os.Stat("/etc/sudoers.d/nosleep")
+	return err != nil
+}
+
 // SetupCommand returns an *exec.Cmd for the setup command.
 // This is not run via Client.run because setup needs an interactive
 // terminal for the sudo password prompt — the TUI uses tea.ExecProcess.
