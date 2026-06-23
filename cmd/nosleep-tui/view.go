@@ -114,7 +114,7 @@ func createControls(m model) string {
 		"s     Setup passwordless mode",
 		"h     Help",
 		"r     Refresh",
-		"q     Quit",
+		"q/esc Quit",
 	}
 
 	// Always reserve a line for the battery warning so the layout height
