@@ -34,7 +34,7 @@ func (m model) View() string {
 		s.WriteString("\n")
 		s.WriteString(m.helpContent)
 		s.WriteString("\n\n")
-		s.WriteString(textSubtle.Render("  Press H to return to dashboard"))
+		s.WriteString(textSubtle.Render("  Press esc to close help"))
 	} else {
 		// Main dashboard view
 		s.WriteString("\n")

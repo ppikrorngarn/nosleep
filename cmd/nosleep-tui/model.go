@@ -17,6 +17,23 @@ const (
 	PhaseHelp    Phase = "help"
 )
 
+const helpText = `NoSleep prevents your Mac from sleeping by toggling the system
+disablesleep setting via pmset. This works with lid closed and on battery.
+
+Key Bindings
+  Space   Toggle sleep on/off
+  s       Setup passwordless mode (sudoers rule)
+  h       Toggle this help screen
+  r       Refresh current sleep state
+  q       Quit the application
+
+Safety
+  Your Mac can remain awake with lid closed and while not on power.
+  This can increase battery drain and cause the laptop to become hot,
+  especially in a bag or poorly ventilated space. Use intentionally.
+
+Note: First time users should press 's' to enable passwordless mode.`
+
 type model struct {
 	client       *Client
 	sleepState   SleepState
@@ -47,7 +64,7 @@ func initialModel(client *Client) model {
 		showHelp:     false,
 		errorMessage: "",
 		spinner:      spinner.New(spinner.WithSpinner(spinner.Line)),
-		helpContent:  "",
+		helpContent:  helpText,
 		width:        0,
 		height:       0,
 	}
@@ -64,6 +81,12 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Allow esc to close help at any time
+		if msg.String() == "esc" && m.showHelp {
+			m.showHelp = false
+			return m, nil
+		}
+
 		// Handle key presses when not in working phase
 		if m.phase != PhaseWorking {
 			switch msg.String() {
@@ -81,9 +104,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "s":
 				return m, runSetup(m.client)
 			case "h":
-				m.showHelp = !m.showHelp
-				if m.showHelp {
-					return m, getHelp()
+				// h opens help (only if not already open)
+				if !m.showHelp {
+					m.showHelp = true
 				}
 				return m, nil
 			case "r":
