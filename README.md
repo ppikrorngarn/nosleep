@@ -128,3 +128,25 @@ You can run it directly or use the macOS launcher:
 | h       | Toggle help                   |
 | r       | Refresh status                |
 | q       | Quit                          |
+
+### macOS App Bundle
+
+You can build a `NoSleep.app` bundle that works like a regular Mac app — double-click to launch, shows up in Spotlight and Launchpad.
+
+```bash
+make app
+```
+
+This produces `build/NoSleep.app`. To install, copy it to `/Applications`:
+
+```bash
+cp -r build/NoSleep.app /Applications/
+```
+
+The app opens Terminal.app and runs the TUI inside it. The binary is fully self-contained — no external files or repo checkout needed.
+
+**Gatekeeper note:** The bundle is ad-hoc signed, which works on the machine that built it. On other machines, macOS may block the app on first launch. To allow it, run:
+
+```bash
+xattr -cr NoSleep.app
+```
