@@ -23,9 +23,10 @@ disablesleep setting via pmset. This works with lid closed and on battery.
 Key Bindings
   Space   Toggle sleep on/off
   s       Setup passwordless mode (sudoers rule)
-  h       Toggle this help screen
+  h       Open help
+  esc     Close help / Quit
   r       Refresh current sleep state
-  q / esc Quit the application
+  q       Quit the application
 
 Safety
   Your Mac can remain awake with lid closed and while not on power.

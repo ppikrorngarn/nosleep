@@ -110,11 +110,12 @@ func createControls(m model) string {
 
 	// Base controls
 	baseControls := []string{
-		"Space Toggle sleep",
+		"Space Toggle sleep on/off",
 		"s     Setup passwordless mode",
-		"h     Help",
+		"h     Open help",
+		"esc   Close help / Quit",
 		"r     Refresh",
-		"q/esc Quit",
+		"q     Quit",
 	}
 
 	// Always reserve a line for the battery warning so the layout height

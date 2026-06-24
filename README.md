@@ -71,6 +71,8 @@ sudo ln -s "$(pwd)/cli/nosleep.sh" /usr/local/bin/nosleep
 
 This requires administrator access because `/usr/local/bin` is a system directory.
 
+> **Apple Silicon note:** On Apple Silicon Macs, `/usr/local/bin` may not be in your `$PATH` (Homebrew uses `/opt/homebrew/bin` by default). You can either add `/usr/local/bin` to your `PATH`, or symlink into `/opt/homebrew/bin` instead.
+
 ## Skip Password Prompts
 
 The easiest way:
@@ -110,13 +112,17 @@ make build
 
 This will automatically generate the required embedded files and compile a single, self-contained `nosleep-tui` binary in `cmd/nosleep-tui/`.
 
+**Prerequisites:** Go 1.16+ (required for `go:embed`). Install via [go.dev/dl](https://go.dev/dl/) or `brew install go`.
+
 ### Run
 
-You can run it directly or use the macOS launcher:
+You can run it directly, use the macOS launcher, or use the make target:
 
 ```bash
 ./cmd/nosleep-tui/nosleep-tui
 # or double-click mac/nosleep.command
+# or
+make run
 ```
 
 ### Key Bindings
@@ -129,6 +135,8 @@ You can run it directly or use the macOS launcher:
 | esc     | Close help / Quit             |
 | r       | Refresh status                |
 | q       | Quit                          |
+
+> **First time?** Press `s` to install the passwordless sudoers rule — otherwise `Space` will prompt for your password each time you toggle.
 
 ### macOS App Bundle
 
@@ -143,6 +151,8 @@ This produces `build/NoSleep.app`. To install, copy it to `/Applications`:
 ```bash
 cp -r build/NoSleep.app /Applications/
 ```
+
+> **Per-user install:** If you don't want to copy to the system-wide `/Applications` (which requires admin), you can copy it to `~/Applications` instead — macOS will still pick it up for Launchpad and Spotlight. Create the folder first with `mkdir -p ~/Applications` if it doesn't exist.
 
 The app opens Terminal.app and runs the TUI inside it. The binary is fully self-contained — no external files or repo checkout needed.
 
