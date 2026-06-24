@@ -137,6 +137,12 @@ You can run it directly, use the macOS launcher, or use the make target:
 make run
 ```
 
+### Screenshots
+
+| Sleeping (sleep enabled) | Awake (sleep disabled) |
+|--------------------------|------------------------|
+| ![TUI showing sleeping state](docs/screenshots/tui-sleeping.png) | ![TUI showing awake state](docs/screenshots/tui-awake.png) |
+
 ### Key Bindings
 
 | Key     | Action                        |
