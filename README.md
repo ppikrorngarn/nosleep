@@ -4,6 +4,18 @@ A tiny macOS shell script for toggling system sleep with `pmset`.
 
 It is intended for cases where you need a system-level sleep toggle, including lid-closed use, rather than a temporary per-process keep-awake command.
 
+## Choose Your Interface
+
+NoSleep ships in three flavors — pick whichever feels most comfortable:
+
+| Interface | Best for | How to run |
+|-----------|----------|------------|
+| **Bash script** (`cli/nosleep.sh`) | Minimalists who like one-liners and shell history | `./cli/nosleep.sh on` |
+| **TUI dashboard** | People who want a keyboard-driven visual interface | `./cmd/nosleep-tui/nosleep-tui` |
+| **macOS app** (`NoSleep.app`) | Anyone who wants a regular double-clickable Mac app | `make app`, then copy to `/Applications` |
+
+All three call into the same `nosleep.sh` under the hood — the TUI and the app just embed it for convenience, so behavior is identical across them. Pick whichever fits your workflow.
+
 ## Usage
 
 ```bash
