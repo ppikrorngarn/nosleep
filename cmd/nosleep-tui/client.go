@@ -58,6 +58,7 @@ func NewClient() (*Client, error) {
 	}
 
 	if err := os.WriteFile(scriptPath, nosleepScript, 0755); err != nil {
+		f.Close()
 		os.Remove(scriptPath)
 		return nil, fmt.Errorf("failed to write embedded script: %w", err)
 	}
@@ -82,7 +83,7 @@ func (c *Client) Status() (SleepState, error) {
 
 	var resp statusResponse
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
-		return StateUnknown, fmt.Errorf("failed to parse status JSON: %w", err)
+		return StateUnknown, fmt.Errorf("failed to parse status JSON response: %w", err)
 	}
 
 	switch resp.State {
@@ -103,10 +104,10 @@ func (c *Client) On() error {
 	}
 	var resp actionResponse
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
-		return fmt.Errorf("failed to parse on JSON: %w", err)
+		return fmt.Errorf("failed to parse on JSON response: %w", err)
 	}
 	if !resp.Ok {
-		return fmt.Errorf("on command reported failure")
+		return fmt.Errorf("on command reported failure: %s", resp.Action)
 	}
 	return nil
 }
@@ -119,17 +120,19 @@ func (c *Client) Off() error {
 	}
 	var resp actionResponse
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
-		return fmt.Errorf("failed to parse off JSON: %w", err)
+		return fmt.Errorf("failed to parse off JSON response: %w", err)
 	}
 	if !resp.Ok {
-		return fmt.Errorf("off command reported failure")
+		return fmt.Errorf("off command reported failure: %s", resp.Action)
 	}
 	return nil
 }
 
 // NeedsSetup checks whether the sudoers rule for passwordless pmset is missing.
+// Returns true if setup is needed (file doesn't exist), false if already set up.
 func (c *Client) NeedsSetup() bool {
 	_, err := os.Stat("/etc/sudoers.d/nosleep")
+	// If stat returns an error, the file doesn't exist, so we need setup
 	return err != nil
 }
 
@@ -150,7 +153,7 @@ func (c *Client) run(args ...string) (string, error) {
 	out, err := cmd.Output()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", fmt.Errorf("command timed out after 5 seconds")
+		return "", fmt.Errorf("command timed out after 5 seconds: %w", context.DeadlineExceeded)
 	}
 
 	return string(out), err
