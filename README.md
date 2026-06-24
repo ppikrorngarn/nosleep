@@ -1,6 +1,6 @@
 # nosleep
 
-A tiny macOS shell script for toggling system sleep with `pmset`.
+A tiny macOS shell script (with TUI available) for toggling system sleep with `pmset`.
 
 It is intended for cases where you need a system-level sleep toggle, including lid-closed use, rather than a temporary per-process keep-awake command.
 
