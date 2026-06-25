@@ -1,4 +1,4 @@
-.PHONY: build clean run app
+.PHONY: build clean run app release
 
 APP_NAME = NoSleep
 APP_BUNDLE = $(APP_NAME).app
@@ -38,3 +38,6 @@ app: build
 	@codesign --force --deep --sign - $(APP_DIR)
 	@echo "==> App bundle: $(APP_DIR)"
 	@echo "==> Copy to /Applications:  cp -r $(APP_DIR) /Applications/"
+
+release: clean app
+	@echo "==> Release build complete"

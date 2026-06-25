@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build TUI binary and app
+        run: |
+          make release
+
+      - name: Create release assets
+        run: |
+          mkdir -p release-assets
+          cp cmd/nosleep-tui/nosleep-tui release-assets/
+          cp -r build/NoSleep.app release-assets/
+          cp cli/nosleep.sh release-assets/
+          cd release-assets
+          zip -r nosleep-tui-macos.zip nosleep-tui
+          zip -r nosleep-app-macos.zip NoSleep.app
+          zip -r nosleep-cli-only.zip nosleep.sh
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "Release ${{ github.ref_name }}" \
+            release-assets/nosleep-tui-macos.zip \
+            release-assets/nosleep-app-macos.zip \
+            release-assets/nosleep-cli-only.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
