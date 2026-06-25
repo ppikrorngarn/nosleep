@@ -110,6 +110,15 @@ echo "yourusername ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bi
 
 This creates a drop-in file under `/etc/sudoers.d/`, which is safer than editing `/etc/sudoers` directly. The `status` command does not use `sudo`, so it is unaffected.
 
+## Automated Builds
+
+Releases are automatically built and published to GitHub Releases when a new tag is pushed. The workflow builds both the TUI binary and the macOS app bundle.
+
+To create a new release:
+1. Create and push a new tag: `git tag v1.2.3`
+2. Push the tag: `git push origin v1.2.3`
+3. GitHub Actions will automatically build and create a release with assets
+
 ## TUI
 
 A terminal UI dashboard for toggling sleep with keyboard shortcuts. The TUI communicates with `nosleep.sh` via the `--json` flag for structured, reliable parsing.
