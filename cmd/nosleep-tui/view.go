@@ -54,7 +54,14 @@ func (m model) View() string {
 		}
 	}
 
-	return s.String()
+	content := s.String()
+
+	// Pad to terminal height to clear old content on resize
+	if m.height > 0 {
+		return lipgloss.Place(m.width, m.height, lipgloss.Left, lipgloss.Top, content)
+	}
+
+	return content
 }
 
 // createStatusCard generates the main hero visual showing whether the
