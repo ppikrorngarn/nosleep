@@ -1,8 +1,5 @@
 # Compiled binaries
 *.exe
-/nosleep-tui
-nosleep-tui.exe
-/cmd/nosleep-tui/nosleep-tui
 
 # Generated files
 /cmd/nosleep-tui/nosleep.sh
