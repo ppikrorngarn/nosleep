@@ -1,20 +1,21 @@
 # nosleep
 
-A tiny macOS shell script (with TUI available) for toggling system sleep with `pmset`.
+A tiny macOS shell script (with a TUI and a native GUI) for toggling system sleep with `pmset`.
 
 It is intended for cases where you need a system-level sleep toggle, including lid-closed use, rather than a temporary per-process keep-awake command.
 
 ## Choose Your Interface
 
-NoSleep ships in three flavors — pick whichever feels most comfortable:
+NoSleep ships in a few flavors — pick whichever feels most comfortable:
 
 | Interface | Best for | How to run |
 |-----------|----------|------------|
 | **Bash script** (`cli/nosleep.sh`) | Minimalists who like one-liners and shell history | `./cli/nosleep.sh on` |
-| **TUI dashboard** | People who want a keyboard-driven visual interface | `./cmd/nosleep-tui/nosleep-tui` |
-| **macOS app** (`NoSleep.app`) | Anyone who wants a regular double-clickable Mac app | `make app`, then copy to `/Applications` |
+| **TUI dashboard** | People who want a keyboard-driven visual interface | `make run` |
+| **TUI Mac app** (`NoSleep-TUI.app`) | The TUI, as a double-clickable app (opens in Terminal) | `make tui-app`, then copy to `/Applications` |
+| **Native GUI** | A regular Mac window with a keep-awake toggle | `make gui` |
 
-All three call into the same `nosleep.sh` under the hood — the TUI and the app just embed it for convenience, so behavior is identical across them. Pick whichever fits your workflow.
+All of these call into the same `nosleep.sh` under the hood — the TUI and both apps just embed it for convenience, so behavior is identical across them. Pick whichever fits your workflow.
 
 ## Usage
 
@@ -93,7 +94,7 @@ The easiest way:
 ./cli/nosleep.sh setup
 ```
 
-This creates a sudoers drop-in file for the current user. You'll enter your password once during setup — after that, `on` and `off` work without prompting.
+This creates a sudoers drop-in file for the current user. You'll enter your password once during setup — after that, `on` and `off` work without prompting. In the native GUI, the same step is **Set Up Now**.
 
 You can also do it manually for a single user or an entire group:
 
@@ -105,19 +106,19 @@ echo "%admin ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmse
 Or limit it to a single user:
 
 ```bash
-echo "yourusername ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1" | sudo tee /etc/sudoers.d/nosleep
+echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/pmset -a disablesleep 0, /usr/bin/pmset -a disablesleep 1" | sudo tee /etc/sudoers.d/nosleep
 ```
 
 This creates a drop-in file under `/etc/sudoers.d/`, which is safer than editing `/etc/sudoers` directly. The `status` command does not use `sudo`, so it is unaffected.
 
 ## Automated Builds
 
-Releases are automatically built and published to GitHub Releases when a new tag is pushed. The workflow builds both the TUI binary and the macOS app bundle.
+Releases are automatically built and published to GitHub Releases when a new tag is pushed. The workflow builds the CLI script, the TUI binary, the TUI Mac app, and the native GUI.
 
 To create a new release:
 1. Create and push a new tag: `git tag v1.2.3`
 2. Push the tag: `git push origin v1.2.3`
-3. GitHub Actions will automatically build and create a release with assets
+3. GitHub Actions will automatically build and create a release with the assets (e.g., `nosleep-tui-app-macos.zip`, `nosleep-gui-app-macos.zip`).
 
 ## TUI
 
@@ -131,24 +132,23 @@ The easiest way to build the TUI is using `make`:
 make build
 ```
 
-This will automatically generate the required embedded files and compile a single, self-contained `nosleep-tui` binary in `cmd/nosleep-tui/`.
+This will automatically generate the required embedded files and compile a single, self-contained `nosleep-tui` binary at `build/nosleep-tui`.
 
 **Prerequisites:** Go 1.16+ (required for `go:embed`). Install via [go.dev/dl](https://go.dev/dl/) or `brew install go`.
 
 ### Run
 
-You can run it directly, use the macOS launcher, or use the make target:
+You can run it directly or with make:
 
 ```bash
-./cmd/nosleep-tui/nosleep-tui
-# or double-click mac/nosleep.command
+./build/nosleep-tui
 # or
 make run
 ```
 
 ### Demo
 
-![NoSleep TUI demo](docs/demo.gif)
+![NoSleep TUI demo](docs/demo-tui.gif)
 
 ### Key Bindings
 
@@ -163,18 +163,18 @@ make run
 
 > **First time?** Press `s` to install the passwordless sudoers rule — otherwise `Space` will prompt for your password each time you toggle.
 
-### macOS App Bundle
+### TUI Mac App
 
-You can build a `NoSleep.app` bundle that works like a regular Mac app — double-click to launch, shows up in Spotlight and Launchpad.
+You can build a `NoSleep-TUI.app` bundle that works like a regular Mac app — double-click to launch, shows up in Spotlight and Launchpad.
 
 ```bash
-make app
+make tui-app
 ```
 
-This produces `build/NoSleep.app`. To install, copy it to `/Applications`:
+This produces `build/NoSleep-TUI.app`. To install, copy it to `/Applications`:
 
 ```bash
-cp -r build/NoSleep.app /Applications/
+cp -r build/NoSleep-TUI.app /Applications/
 ```
 
 > **Per-user install:** If you don't want to copy to the system-wide `/Applications` (which requires admin), you can copy it to `~/Applications` instead — macOS will still pick it up for Launchpad and Spotlight. Create the folder first with `mkdir -p ~/Applications` if it doesn't exist.
@@ -184,5 +184,57 @@ The app opens Terminal.app and runs the TUI inside it. The binary is fully self-
 **Gatekeeper note:** The bundle is ad-hoc signed, which works on the machine that built it. On other machines, macOS may block the app on first launch. To allow it, run:
 
 ```bash
-xattr -cr NoSleep.app
+xattr -cr NoSleep-TUI.app
 ```
+
+## Native GUI
+
+A small SwiftUI window that talks to the same `nosleep.sh` script. Use this if you want a regular Mac app instead of a terminal dashboard.
+
+### Demo
+
+![NoSleep GUI demo](docs/demo-gui.gif)
+
+### Build
+
+You need [Xcode](https://developer.apple.com/xcode/) and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen` if you don't have it). macOS 14 or later.
+
+```bash
+make gui
+```
+
+This produces `build/NoSleep-GUI.app` (kept separate from the TUI's `build/NoSleep-TUI.app`). To install, copy it to `/Applications`:
+
+```bash
+cp -r build/NoSleep-GUI.app /Applications/
+```
+
+Or open the generated project in Xcode:
+
+```bash
+cd NoSleep-GUI
+xcodegen generate
+open NoSleepGUI.xcodeproj
+```
+
+### Run
+
+```bash
+make run-gui
+```
+
+The app is unsandboxed on purpose — it has to read `/etc/sudoers.d/nosleep` and run `sudo pmset`.
+
+**Gatekeeper note:** The bundle is ad-hoc signed, which works on the machine that built it. On other machines, macOS may block the app on first launch. To allow it, run:
+
+```bash
+xattr -cr NoSleep-GUI.app
+```
+
+### How to use
+
+1. If you see **Setup Required**, click **Set Up Now** and enter your Mac admin password. That installs the same passwordless sudoers rule as `./cli/nosleep.sh setup`.
+2. Use the **Keep awake** switch to turn sleep off and on.
+3. Click **Refresh** if you changed the setting from the CLI or TUI and want the window to catch up. Status also refreshes on its own every few seconds.
+
+The orange **Battery drain risk** note appears while sleep is disabled — turn the switch off when you are done.
