@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# NoSleep.app launcher
+# NoSleep-TUI.app launcher
 # Opens Terminal.app and runs the bundled nosleep-tui binary
 
 RESOURCES_DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
 TUI_BINARY="$RESOURCES_DIR/nosleep-tui"
 
 if [[ ! -f "$TUI_BINARY" ]]; then
-    osascript -e 'display dialog "NoSleep TUI binary not found.\nPlease reinstall NoSleep." buttons {"OK"} default button "OK" with icon stop with title "NoSleep"'
+    osascript -e 'display dialog "NoSleep TUI binary not found.\nPlease reinstall NoSleep TUI." buttons {"OK"} default button "OK" with icon stop with title "NoSleep TUI"'
     exit 1
 fi
 
