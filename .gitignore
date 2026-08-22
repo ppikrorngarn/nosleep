@@ -20,3 +20,11 @@ build/
 
 # Go
 vendor/
+
+# XcodeGen / macOS GUI
+NoSleep-GUI/**/*.xcodeproj
+NoSleep-GUI/**/*.xcworkspace
+NoSleep-GUI/DerivedData/
+NoSleep-GUI/.build/
+NoSleep-GUI/**/*.xcuserdatad
+NoSleep-GUI/**/*.xcuserstate
