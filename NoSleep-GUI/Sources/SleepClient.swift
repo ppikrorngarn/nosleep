@@ -93,19 +93,25 @@ final class SleepClient {
 
     func status() async throws -> SleepState {
         let data = try await runScript(args: ["status", "--json"])
-        let resp = try JSONDecoder().decode(StatusResponse.self, from: data)
+        guard let resp = try? JSONDecoder().decode(StatusResponse.self, from: data) else {
+            throw ClientError.invalidOutput
+        }
         return resp.parsedState
     }
 
     func turnOn() async throws {
         let data = try await runScript(args: ["on", "--json"])
-        let resp = try JSONDecoder().decode(ActionResponse.self, from: data)
+        guard let resp = try? JSONDecoder().decode(ActionResponse.self, from: data) else {
+            throw ClientError.invalidOutput
+        }
         if !resp.ok { throw ClientError.executionFailed(exitCode: 1, stderr: "Script reported failure via JSON") }
     }
 
     func turnOff() async throws {
         let data = try await runScript(args: ["off", "--json"])
-        let resp = try JSONDecoder().decode(ActionResponse.self, from: data)
+        guard let resp = try? JSONDecoder().decode(ActionResponse.self, from: data) else {
+            throw ClientError.invalidOutput
+        }
         if !resp.ok { throw ClientError.executionFailed(exitCode: 1, stderr: "Script reported failure via JSON") }
     }
 
