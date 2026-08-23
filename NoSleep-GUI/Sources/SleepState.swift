@@ -4,7 +4,7 @@ enum SleepState: String, CaseIterable, Codable {
     case normal = "normal"
     case awake  = "awake"
     case unknown = "unknown"
-    
+
     var displayName: String {
         switch self {
         case .awake:   return "AWAKE"
@@ -12,7 +12,7 @@ enum SleepState: String, CaseIterable, Codable {
         case .unknown: return "UNKNOWN"
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .awake:   return "☕"
@@ -20,7 +20,7 @@ enum SleepState: String, CaseIterable, Codable {
         case .unknown: return "❓"
         }
     }
-    
+
     var descriptionText: String {
         switch self {
         case .awake:   return "Your Mac will not sleep"
@@ -33,7 +33,7 @@ enum SleepState: String, CaseIterable, Codable {
 struct StatusResponse: Codable {
     let state: String
     let disablesleep: Int
-    
+
     var parsedState: SleepState {
         return SleepState(rawValue: state) ?? .unknown
     }
