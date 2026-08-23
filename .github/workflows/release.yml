@@ -22,7 +22,7 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Build TUI, TUI app, and GUI
+      - name: Build TUI, TUI app, and GUI app
         run: make release
 
       - name: Create release assets
