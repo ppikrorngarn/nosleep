@@ -2,13 +2,13 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var model = NoSleepModel()
-    
+
     var body: some View {
         VStack(spacing: 16) {
             Text("NoSleep · macOS")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            
+
             if model.isWorking {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle())
@@ -17,7 +17,7 @@ struct ContentView: View {
             } else {
                 StatusCard(state: model.sleepState)
             }
-            
+
             if model.needsSetup {
                 VStack(spacing: 8) {
                     Text("Setup Required")
@@ -27,7 +27,7 @@ struct ContentView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    
+
                     Button("Set Up Now") {
                         Task { await model.runSetup() }
                     }
@@ -53,7 +53,7 @@ struct ContentView: View {
                 .toggleStyle(.switch)
                 .disabled(model.isBusy || model.sleepState == .unknown)
             }
-            
+
             if model.sleepState == .awake {
                 Text("⚠ Battery drain risk while disabled")
                     .foregroundStyle(.orange)
@@ -62,14 +62,14 @@ struct ContentView: View {
                 Text(" ")
                     .font(.caption)
             }
-            
+
             if !model.errorMessage.isEmpty {
                 Text(model.errorMessage)
                     .foregroundStyle(.red)
                     .font(.caption)
                     .multilineTextAlignment(.center)
             }
-            
+
             Button("Refresh") {
                 Task { await model.refreshStatus() }
             }
@@ -91,7 +91,7 @@ struct ContentView: View {
 
 struct StatusCard: View {
     let state: SleepState
-    
+
     var body: some View {
         RoundedRectangle(cornerRadius: 12)
             .fill(state == .awake ? Color.orange.opacity(0.15) : Color.gray.opacity(0.15))
