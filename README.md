@@ -118,7 +118,7 @@ Releases are automatically built and published to GitHub Releases when a new tag
 To create a new release:
 1. Create and push a new tag: `git tag v1.2.3`
 2. Push the tag: `git push origin v1.2.3`
-3. GitHub Actions will automatically build and create a release with the assets (e.g., `nosleep-tui-app-macos.zip`, `nosleep-gui-app-macos.zip`).
+3. GitHub Actions will automatically build and create a release with the assets (e.g., `nosleep-tui-app-macos.zip`, `nosleep-gui-macos.zip`).
 
 ## TUI
 
