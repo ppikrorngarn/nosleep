@@ -24,10 +24,13 @@ final class SleepClient {
     }
 
     // A nil timeout means "wait as long as it takes" — the setup prompt waits on the user.
-    private func runProcess(executable: String, arguments: [String], timeout: TimeInterval?) async throws -> ProcessResult {
+    private func runProcess(executable: String, arguments: [String], environment: [String: String] = [:], timeout: TimeInterval?) async throws -> ProcessResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
+        if !environment.isEmpty {
+            process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, override in override }
+        }
 
         let outPipe = Pipe()
         let errPipe = Pipe()
@@ -142,7 +145,55 @@ final class SleepClient {
         return message.isEmpty ? "Setup was not completed." : message
     }
 
-    func needsSetup() -> Bool {
-        return !FileManager.default.fileExists(atPath: "/etc/sudoers.d/nosleep")
+    // The sudoers rule only grants these two exact commands, so both have to be covered.
+    private static let requiredCommands = [
+        "/usr/bin/pmset -a disablesleep 0",
+        "/usr/bin/pmset -a disablesleep 1",
+    ]
+
+    // Detection for whoever is running the GUI. `setup` overwrites the single sudoers file, so a
+    // rule left by another account tells us nothing about this one.
+    func needsSetup() async -> Bool {
+        // An exit code alone proves nothing: an admin's "(ALL) ALL" rule permits the pmset commands
+        // but still asks for a password, so the listing itself is parsed for the NOPASSWD tag.
+        // LC_ALL keeps that listing in the format the parser expects.
+        guard let result = try? await runProcess(
+                executable: "/usr/bin/sudo",
+                arguments: ["-n", "-l"],
+                environment: ["LC_ALL": "C"],
+                timeout: 5.0
+              ),
+              result.exitCode == 0,
+              let listing = String(data: result.stdout, encoding: .utf8)
+        else {
+            return true
+        }
+        return !Self.grantsRequiredCommandsWithoutPassword(listing)
+    }
+
+    // Entries in `sudo -l` output look like "(runas) TAG: command, command"; a tag applies to every
+    // command after it on that line.
+    private static func grantsRequiredCommandsWithoutPassword(_ listing: String) -> Bool {
+        var passwordless: Set<String> = []
+
+        for line in listing.split(separator: "\n") {
+            let entries = line.trimmingCharacters(in: .whitespaces)
+            guard entries.hasPrefix("("), let runAsEnd = entries.firstIndex(of: ")") else { continue }
+
+            var withoutPassword = false
+            for entry in entries[entries.index(after: runAsEnd)...].split(separator: ",") {
+                var command = entry.trimmingCharacters(in: .whitespaces)
+                while let colon = command.firstIndex(of: ":") {
+                    let tag = String(command[..<colon])
+                    guard tag.range(of: "^[A-Z_]+$", options: .regularExpression) != nil else { break }
+                    if tag == "NOPASSWD" { withoutPassword = true }
+                    if tag == "PASSWD" { withoutPassword = false }
+                    command = String(command[command.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                }
+                if withoutPassword { passwordless.insert(command) }
+            }
+        }
+
+        return requiredCommands.allSatisfy(passwordless.contains)
     }
 }
