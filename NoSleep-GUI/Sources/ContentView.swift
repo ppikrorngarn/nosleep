@@ -33,6 +33,7 @@ struct ContentView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.red)
+                    .disabled(model.isBusy)
                     .padding(.top, 4)
                 }
                 .padding()
@@ -50,7 +51,7 @@ struct ContentView: View {
                     Label("Keep awake", systemImage: "power")
                 }
                 .toggleStyle(.switch)
-                .disabled(model.isWorking || model.sleepState == .unknown)
+                .disabled(model.isBusy || model.sleepState == .unknown)
             }
             
             if model.sleepState == .awake {
@@ -74,6 +75,7 @@ struct ContentView: View {
             }
             .buttonStyle(.link)
             .font(.caption)
+            .disabled(model.isBusy)
         }
         .padding(24)
         .frame(width: 320)
@@ -81,7 +83,7 @@ struct ContentView: View {
             await model.refreshStatus()
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
-                if !model.isWorking { await model.refreshStatus(showProgress: false) }
+                await model.refreshStatus(showProgress: false)
             }
         }
     }

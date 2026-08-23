@@ -5,6 +5,9 @@ import Observation
 @Observable
 final class NoSleepModel {
     var sleepState: SleepState = .unknown
+    // Any command in flight, background poll included; the controls key off this
+    var isBusy: Bool = false
+    // Only a user-initiated command, which is what the progress spinner stands in for
     var isWorking: Bool = false
     var errorMessage: String = ""
     var needsSetup: Bool = false
@@ -12,24 +15,22 @@ final class NoSleepModel {
     @ObservationIgnored private let client = SleepClient()
 
     func refreshStatus(showProgress: Bool = true) async {
-        if showProgress {
-            isWorking = true
-            errorMessage = ""
-        }
+        guard beginOperation(showProgress: showProgress) else { return }
+        defer { endOperation() }
+
         await loadStatus()
-        if showProgress { isWorking = false }
     }
 
     func runSetup() async {
-        isWorking = true
-        errorMessage = ""
+        guard beginOperation(showProgress: true) else { return }
+        defer { endOperation() }
+
         do {
             try await client.setup()
             await loadStatus()
         } catch {
             errorMessage = error.localizedDescription
         }
-        isWorking = false
     }
 
     func turnOn() async {
@@ -41,11 +42,11 @@ final class NoSleepModel {
     }
 
     private func setSleepDisabled(_ disabled: Bool) async {
+        guard beginOperation(showProgress: true) else { return }
+        defer { endOperation() }
+
         needsSetup = await client.needsSetup()
         if needsSetup { return }
-
-        isWorking = true
-        errorMessage = ""
 
         do {
             if disabled { try await client.turnOn() } else { try await client.turnOff() }
@@ -64,7 +65,20 @@ final class NoSleepModel {
                 errorMessage = "Sleep setting applied, but reading the status back failed: \(error.localizedDescription)"
             }
         }
+    }
+
+    // One command at a time: whoever passes this guard owns the flags until it ends
+    private func beginOperation(showProgress: Bool) -> Bool {
+        if isBusy { return false }
+        isBusy = true
+        isWorking = showProgress
+        if showProgress { errorMessage = "" }
+        return true
+    }
+
+    private func endOperation() {
         isWorking = false
+        isBusy = false
     }
 
     private func loadStatus() async {
