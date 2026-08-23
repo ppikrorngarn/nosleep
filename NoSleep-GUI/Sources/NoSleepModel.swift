@@ -16,7 +16,7 @@ final class NoSleepModel {
             isWorking = true
             errorMessage = ""
         }
-        needsSetup = client.needsSetup()
+        needsSetup = await client.needsSetup()
         
         do {
             sleepState = try await client.status()
@@ -40,7 +40,7 @@ final class NoSleepModel {
     }
     
     func turnOn() async {
-        needsSetup = client.needsSetup()
+        needsSetup = await client.needsSetup()
         if needsSetup { return }
         
         isWorking = true
@@ -56,7 +56,7 @@ final class NoSleepModel {
     }
     
     func turnOff() async {
-        needsSetup = client.needsSetup()
+        needsSetup = await client.needsSetup()
         if needsSetup { return }
         
         isWorking = true
