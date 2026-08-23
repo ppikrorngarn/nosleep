@@ -6,7 +6,7 @@ final class SleepClient {
         case timeout
         case executionFailed(exitCode: Int32, stderr: String)
         case invalidOutput
-        
+
         var errorDescription: String? {
             switch self {
             case .scriptNotFound: return "Internal script not found in bundle."
@@ -17,15 +17,17 @@ final class SleepClient {
         }
     }
 
-    private func runScript(args: [String]) async throws -> Data {
-        guard let scriptURL = Bundle.main.url(forResource: "nosleep", withExtension: "sh") else {
-            throw ClientError.scriptNotFound
-        }
+    private struct ProcessResult {
+        let exitCode: Int32
+        let stdout: Data
+        let stderr: String
+    }
 
+    // A nil timeout means "wait as long as it takes" — the setup prompt waits on the user.
+    private func runProcess(executable: String, arguments: [String], timeout: TimeInterval?) async throws -> ProcessResult {
         let process = Process()
-        // Run via bash to avoid chmod +x bundle issues
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptURL.path] + args
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
 
         let outPipe = Pipe()
         let errPipe = Pipe()
@@ -35,8 +37,8 @@ final class SleepClient {
         return try await withCheckedThrowingContinuation { continuation in
             var isResumed = false
             let lock = NSLock()
-            
-            func resume(with result: Result<Data, Error>) {
+
+            func resume(with result: Result<ProcessResult, Error>) {
                 lock.lock()
                 defer { lock.unlock() }
                 if !isResumed {
@@ -48,29 +50,42 @@ final class SleepClient {
             process.terminationHandler = { p in
                 let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
                 let stderr = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                
-                if p.terminationStatus != 0 {
-                    resume(with: .failure(ClientError.executionFailed(exitCode: p.terminationStatus, stderr: stderr)))
-                } else {
-                    let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-                    resume(with: .success(outData))
-                }
+                let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+                resume(with: .success(ProcessResult(exitCode: p.terminationStatus, stdout: outData, stderr: stderr)))
             }
 
             do {
                 try process.run()
-                
-                // 5-second timeout matching Go client
-                DispatchQueue.global().asyncAfter(deadline: .now() + 5.0) {
-                    if process.isRunning {
-                        process.terminate()
-                        resume(with: .failure(ClientError.timeout))
+
+                if let timeout {
+                    DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
+                        if process.isRunning {
+                            process.terminate()
+                            resume(with: .failure(ClientError.timeout))
+                        }
                     }
                 }
             } catch {
                 resume(with: .failure(error))
             }
         }
+    }
+
+    private func runScript(args: [String]) async throws -> Data {
+        guard let scriptURL = Bundle.main.url(forResource: "nosleep", withExtension: "sh") else {
+            throw ClientError.scriptNotFound
+        }
+
+        // Run via bash to avoid chmod +x bundle issues, with the 5-second timeout matching the Go client
+        let result = try await runProcess(
+            executable: "/bin/bash",
+            arguments: [scriptURL.path] + args,
+            timeout: 5.0
+        )
+        guard result.exitCode == 0 else {
+            throw ClientError.executionFailed(exitCode: result.exitCode, stderr: result.stderr)
+        }
+        return result.stdout
     }
 
     func status() async throws -> SleepState {
@@ -91,26 +106,40 @@ final class SleepClient {
         if !resp.ok { throw ClientError.executionFailed(exitCode: 1, stderr: "Script reported failure via JSON") }
     }
 
+    // The user name and script path stay out of the script source: osascript hands them over as
+    // `on run argv` items, so quotes or backslashes in either cannot break out of the AppleScript
+    // literal. USER is passed on so the bash script writes the sudoers rule for the GUI user, not root.
+    private static let setupScriptSource = """
+    on run argv
+        do shell script "USER=" & quoted form of (item 1 of argv) & " /bin/bash " & quoted form of (item 2 of argv) & " setup" with administrator privileges
+    end run
+    """
+
     func setup() async throws {
         guard let scriptURL = Bundle.main.url(forResource: "nosleep", withExtension: "sh") else {
             throw ClientError.scriptNotFound
         }
-        let user = NSUserName()
-        
-        // Pass USER explicitly so the bash script writes the sudoers rule for the GUI user, not root
-        let scriptSource = """
-        do shell script "USER=" & quoted form of "\(user)" & " /bin/bash " & quoted form of "\(scriptURL.path)" & " setup" with administrator privileges
-        """
-        
-        if let appleScript = NSAppleScript(source: scriptSource) {
-            var errorInfo: NSDictionary?
-            appleScript.executeAndReturnError(&errorInfo)
-            if let err = errorInfo {
-                throw ClientError.executionFailed(exitCode: -1, stderr: "Setup failed: \(err)")
-            }
-        } else {
-            throw ClientError.executionFailed(exitCode: -1, stderr: "Failed to compile AppleScript")
+
+        // "--" stops osascript from reading a value that begins with "-" as one of its own options.
+        // No timeout: the administrator prompt waits on the user.
+        let result = try await runProcess(
+            executable: "/usr/bin/osascript",
+            arguments: ["-e", Self.setupScriptSource, "--", NSUserName(), scriptURL.path],
+            timeout: nil
+        )
+        guard result.exitCode == 0 else {
+            throw ClientError.executionFailed(exitCode: result.exitCode, stderr: Self.readableScriptError(result.stderr))
         }
+    }
+
+    // osascript prefixes failures with a source location, e.g. "2:44: execution error: User canceled. (-128)"
+    private static func readableScriptError(_ stderr: String) -> String {
+        let message = stderr.replacingOccurrences(
+            of: "^[0-9]+:[0-9]+: (execution|syntax) error: ",
+            with: "",
+            options: [.regularExpression]
+        )
+        return message.isEmpty ? "Setup was not completed." : message
     }
 
     func needsSetup() -> Bool {
