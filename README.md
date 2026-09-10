@@ -241,4 +241,4 @@ xattr -cr NoSleep-GUI.app
 2. Use the **Keep awake** switch to turn sleep off and on.
 3. Click **Refresh** if you changed the setting from the CLI or TUI and want the window to catch up. Status also refreshes on its own every few seconds.
 
-The orange **Battery drain risk** note appears while sleep is disabled — turn the switch off when you are done.
+The orange **Battery drain risk** note appears while your Mac is kept awake — turn the switch off when you are done.
