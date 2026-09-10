@@ -111,7 +111,7 @@ func createStatusCard(m model) string {
 }
 
 // createControls returns the list of available keyboard shortcuts
-// and optionally renders a battery warning if sleep is disabled.
+// and optionally renders a battery warning while the Mac is kept awake.
 func createControls(m model) string {
 	var controls strings.Builder
 
@@ -128,7 +128,7 @@ func createControls(m model) string {
 	// Always reserve a line for the battery warning so the layout height
 	// stays constant when toggling between ON/OFF states.
 	if m.sleepState == StateAwake {
-		controls.WriteString(textWarn.Render("  ⚠ Battery drain risk while disabled"))
+		controls.WriteString(textWarn.Render("  ⚠ Battery drain risk while your Mac is awake"))
 	} else {
 		controls.WriteString(" ")
 	}

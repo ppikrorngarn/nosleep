@@ -52,19 +52,21 @@ func TestView_NoPaddingBeforeFirstWindowSizeMsg(t *testing.T) {
 }
 
 // TestView_WarningShownWhenAwake checks the battery drain warning is present
-// when sleep is disabled.
+// while the Mac is kept awake.
 func TestView_WarningShownWhenAwake(t *testing.T) {
 	m := testModel(StateAwake, 0, 0)
 	out := m.View()
 
-	if !strings.Contains(out, "Battery drain risk") {
+	// Assert the full wording: the warning must say what drains the battery
+	// (an awake Mac), not leave "disabled" without a subject.
+	if !strings.Contains(out, "Battery drain risk while your Mac is awake") {
 		t.Error("expected battery drain warning when state is StateAwake, got none")
 	}
 }
 
 // TestView_WarningAbsentWhenSleeping checks the battery drain warning is not
-// shown when sleep is enabled, but the blank placeholder line is still rendered
-// to keep layout height constant.
+// shown while the Mac can sleep normally, but the blank placeholder line is
+// still rendered to keep layout height constant.
 func TestView_WarningAbsentWhenSleeping(t *testing.T) {
 	m := testModel(StateNormal, 0, 0)
 	out := m.View()
