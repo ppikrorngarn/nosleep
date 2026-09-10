@@ -55,7 +55,7 @@ struct ContentView: View {
             }
 
             if model.sleepState == .awake {
-                Text("⚠ Battery drain risk while disabled")
+                Text("⚠ Battery drain risk while your Mac is awake")
                     .foregroundStyle(.orange)
                     .font(.caption)
             } else {
